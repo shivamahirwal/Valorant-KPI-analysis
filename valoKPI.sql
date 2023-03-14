@@ -25,7 +25,8 @@ group by player.name,player.team
 order by player.team, totalAcs desc;
 
 select *
-from teamAcs1;
+from teamAcs1
+order by team,totalAcs desc;
 
 --Finding the total sum of ACS of all teams
 select team, sum(totalAcs) as totalteamAcs
@@ -50,6 +51,26 @@ ORDER BY player.team, totalAcs DESC;
 /*
 The above results tells us that how well the players are performing with their team
 */
+
+/*
+Calculating score of all teams, defined as the sum of difference of players ACS with the bottom player ACS within a team
+For example, there are 5 players in a team: P1, P2, P3, P4, P5
+They have a sum of ACS throughout the tournament: 70, 50, 40, 30, 10 respectively
+so the score for the team = (70-10)+(50-10)+(40-10)+(30-10)
+*/
+WITH teamAcs2 AS (
+  SELECT 
+    teamAcs1.team, 
+    teamAcs1.totalAcs, 
+    MIN(teamAcs1.totalAcs) OVER (PARTITION BY teamAcs1.team) AS minTotalAcs
+  FROM teamAcs1
+)
+SELECT 
+  teamAcs2.team, 
+  SUM(teamAcs2.totalAcs - teamAcs2.minTotalAcs) AS teamScore
+FROM teamAcs2
+GROUP BY teamAcs2.team
+ORDER BY teamScore DESC;
 
 -- Finding the relative standard deviation of ACS of players throughout the tournament
 select name, round(100 * STDEV(acs)/avg(acs),2) as relativeStd 
