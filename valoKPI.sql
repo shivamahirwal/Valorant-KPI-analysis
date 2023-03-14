@@ -1,51 +1,67 @@
+--Player data table 
 select * 
 from [Portfolio Project].dbo.playerData
 
+--Match data table
 select *
 from [Portfolio Project]..matchData;
 
+--Map data table
 select *
 from [Portfolio Project]..mapData;
 
-select distinct name, playerId
-from [Portfolio Project]..playerData;
-
+--Player data ordered by the Average combat score(ACS)
 select *
 from [Portfolio Project]..playerData
 order by mapId,team, acs desc;
 
-select name,playerId, team
-from [Portfolio Project]..playerData
-group by team
-
-select player.name,map.mapName
+-- Sum of ACS of players in all games grouped by the team and stored in teamAsc1 table
+select player.name, player.team , SUM(player.acs) as totalAcs
+into teamAcs1
 from [Portfolio Project]..playerData as player
 inner join [Portfolio Project]..mapData as map
 on player.mapId=map.id
+group by player.name,player.team
+order by player.team, totalAcs desc;
+
+select *
+from teamAcs1;
+
+--Finding the total sum of ACS of all teams
+select team, sum(totalAcs) as totalteamAcs
+from teamAcs1
+group by team;
+
+--Contribution of players in their total team's ACS
+SELECT player.name, player.team, 
+       SUM(player.acs) as totalAcs, 
+       round(100.0 * SUM(player.acs) / team.totalteamAcs, 2) as percentageOfTeamAcs
+FROM [Portfolio Project]..playerData as player
+INNER JOIN [Portfolio Project]..mapData as map
+ON player.mapId=map.id
+INNER JOIN (
+    select team, sum(totalAcs) as totalteamAcs
+	from teamAcs1
+	group by team
+) as team
+ON player.team = team.team
+GROUP BY player.name, player.team, team.totalteamAcs
+ORDER BY player.team, totalAcs DESC;
+/*
+The above results tells us that how well the players are performing with their team
+*/
+
+-- Finding the relative standard deviation of ACS of players throughout the tournament
+select name, round(100 * STDEV(acs)/avg(acs),2) as relativeStd 
+from [Portfolio Project].dbo.playerData
+group by name;
+/*
+The above result shows consistency of players performance throughout the tournament, 
+if the deviation is high the player's performance is not consistent.
+*/
 
 
-select * 
-from [Portfolio Project].dbo.playerData;
-
-create table maxacs_temp as
-	select max(acs) over (partition by mapId, team) as maxacs, acs,
-	id, playerId into maxacs_temp
-	from [Portfolio Project]..playerData; 
 
 
-select * 
-from [Portfolio Project].dbo.playerData;
-select * from maxacs_temp;
 
-select playerId, Count(playerId) as Frequency into topfragcount
-from maxacs_temp
-where maxacs = acs
-group by playerId;
-
-select playerId, Count(playerId) as matchFrequency into totalmatchcount
-from [Portfolio Project]..playerData
-group by playerId;
-
-SELECT (topfragcount.Frequency / totalmatchcount.matchFrequency)  as result, topfragcount.playerId
-FROM topfragcount INNER JOIN totalmatchcount
-ON topfragcount.playerId = totalmatchcount.playerId;  
+ 
