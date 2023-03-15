@@ -37,6 +37,7 @@ group by team;
 SELECT player.name, player.team, 
        SUM(player.acs) as totalAcs, 
        round(100.0 * SUM(player.acs) / team.totalteamAcs, 2) as percentageOfTeamAcs
+INTO Acsweight
 FROM [Portfolio Project]..playerData as player
 INNER JOIN [Portfolio Project]..mapData as map
 ON player.mapId=map.id
@@ -58,22 +59,37 @@ For example, there are 5 players in a team: P1, P2, P3, P4, P5
 They have a sum of ACS throughout the tournament: 70, 50, 40, 30, 10 respectively
 so the score for the team = (70-10)+(50-10)+(40-10)+(30-10)
 */
-WITH teamAcs2 AS (
+-- Create a temporary table with the query results
+SELECT 
+  teamAcs2.team, 
+  SUM(teamAcs2.totalAcs - teamAcs2.minTotalAcs) AS teamScore
+INTO #tempTeamScores
+FROM (
   SELECT 
     teamAcs1.team, 
     teamAcs1.totalAcs, 
     MIN(teamAcs1.totalAcs) OVER (PARTITION BY teamAcs1.team) AS minTotalAcs
   FROM teamAcs1
-)
-SELECT 
-  teamAcs2.team, 
-  SUM(teamAcs2.totalAcs - teamAcs2.minTotalAcs) AS teamScore
-FROM teamAcs2
+) AS teamAcs2
 GROUP BY teamAcs2.team
 ORDER BY teamScore DESC;
 
+-- Create a permanent table with the results of the query
+CREATE TABLE teamScores (
+  team VARCHAR(50),
+  teamScore INT
+);
+
+INSERT INTO teamScores (team, teamScore)
+SELECT team, teamScore
+FROM #tempTeamScores;
+
+-- Drop the temporary table
+DROP TABLE #tempTeamScores;
+
 -- Finding the relative standard deviation of ACS of players throughout the tournament
-select name, round(100 * STDEV(acs)/avg(acs),2) as relativeStd 
+select name, round(100 * STDEV(acs)/avg(acs),2) as relativeStd
+into acsdev
 from [Portfolio Project].dbo.playerData
 group by name;
 /*
