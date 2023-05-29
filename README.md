@@ -12,4 +12,6 @@ I had three tables of data,
 Using this data, three KPIs were estimated:
 - Weighted performance of player: Contribution of each player to the total ACS(average combat score) in the tournament
 - Team Score: Sum of difference ACS and minimum ACS within a team
-- Player's consistency: Relative standard deviation of players 
+- Player's consistency: Relative standard deviation of players ACS throughout the tournament
+
+
